@@ -1,0 +1,12 @@
+# Basic .gitignore file for a C++ project
+# Ignore build artifacts
+/build/
+/bin/
+/obj/
+# Ignore temporary files
+*.tmp
+*.log
+# Ignore IDE specific files
+*.vscode/
+*.idea/
+
