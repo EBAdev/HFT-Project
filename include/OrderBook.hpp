@@ -26,7 +26,7 @@ public:
   // Add an order to the book.
   // Ownership transfers to the OrderBook on successful insertion.
   // If insertion fails, the caller retains ownership of the order.
-  bool add_order(std::unique_ptr<Order> order);
+  bool add_order(std::unique_ptr<Order> &order);
 
   // Cancel an order by its ID.
   bool cancel_order(std::uint64_t order_id);

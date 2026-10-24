@@ -23,6 +23,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 # Shared production code
 add_library(hft_core
     src/Order.cpp
+    src/OrderBook.cpp
 )
 
 target_include_directories(hft_core
@@ -42,6 +43,7 @@ target_link_libraries(hft_project
 # Unit tests
 add_executable(test_order
     tests/test_order.cpp
+    tests/test_order_book.cpp
 )
 
 # Link the shared library and Google Test to the test executable

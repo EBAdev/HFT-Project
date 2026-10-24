@@ -15,7 +15,7 @@ OrderBook::OrderBook(std::uint32_t instrument_id)
 
 std::uint32_t OrderBook::instrument_id() const { return instrument_id_; }
 
-bool OrderBook::add_order(std::unique_ptr<Order> order) {
+bool OrderBook::add_order(std::unique_ptr<Order> &order) {
   if (order == nullptr) {
     throw std::invalid_argument("Recieved a nullptr as input");
   }
