@@ -24,6 +24,13 @@ bool OrderBook::add_order(std::unique_ptr<Order> order) {
         "Order is in the wrong book, the InstrumentID, should match.");
   }
 
+  // only allow orders which can be filled to rest
+  if (not((order->state() == OrderState::Active or
+           order->state() == OrderState::PartiallyFilled) and
+          order->remaining_quantity() > 0)) {
+    return false;
+  }
+
   // Check whether the order ID already exists
   if (order_index_.find(order->id()) != order_index_.end()) {
     return false;
@@ -36,15 +43,35 @@ bool OrderBook::add_order(std::unique_ptr<Order> order) {
   Order *ptr = order.get();
 
   // add the order to the index
-  // Note that order is a nullptr after this line
-  auto result = order_index_.emplace(id, std::move(order));
+  auto result = order_index_.try_emplace(id, nullptr);
   if (!result.second) {
-    return false;
+    return false; // Duplicate ID; order is still owned by caller.
   }
 
   // Depending on weather the order is a buy/sell find the queue
-  OrderQueue *queue = find_or_create_queue(side, price);
-  queue->emplace_back(ptr);
+
+  OrderQueue *queue;
+  bool created = false;
+  try {
+    auto tmp = find_or_create_queue(side, price);
+    queue = tmp.first;
+    created = tmp.second;
+    queue->emplace_back(ptr);
+  } catch (...) {
+    order_index_.erase(id);
+    // Also remove the price level if this attempt created it
+    // and it is still empty.
+    if (created && queue->empty()) {
+      if (side == OrderSide::Buy) {
+        bid_side_.erase(price);
+      } else {
+        ask_side_.erase(price);
+      }
+    }
+    throw;
+  }
+
+  result.first->second = std::move(order);
 
   return true;
 }
@@ -64,18 +91,15 @@ const Order *OrderBook::get_order(std::uint64_t order_id) const {
   return nullptr;
 }
 
-OrderBook::OrderQueue *OrderBook::find_or_create_queue(OrderSide side,
-                                                       std::int64_t price) {
-  // Depending on weather the order is a buy/sell find the queue
-  OrderQueue *queue;
+std::pair<OrderBook::OrderQueue *, bool>
+OrderBook::find_or_create_queue(OrderSide side, std::int64_t price) {
   if (side == OrderSide::Buy) {
-    bid_side_.try_emplace(price);
-    queue = &bid_side_.find(price)->second;
+    auto [it, inserted] = bid_side_.try_emplace(price);
+    return {&it->second, inserted};
   } else {
-    ask_side_.try_emplace(price);
-    queue = &ask_side_.find(price)->second;
+    auto [it, inserted] = ask_side_.try_emplace(price);
+    return {&it->second, inserted};
   }
-  return queue;
 }
 
 OrderBook::OrderQueue *OrderBook::find_queue(OrderSide side,
@@ -105,8 +129,11 @@ bool OrderBook::cancel_order(std::uint64_t order_id) {
     return false;
   }
 
-  // Depending on weather the order is a buy/sell find the queue
+  // Depending on whether the order is a buy/sell find the queue
   OrderQueue *queue = find_queue(order->side(), order->tick_price());
+  if (queue == nullptr) {
+    return false;
+  }
 
   // remove the order from the queue
   auto it = std::find(queue->begin(), queue->end(), order);
@@ -135,9 +162,15 @@ bool OrderBook::cancel_order(std::uint64_t order_id) {
 }
 
 std::optional<std::int64_t> OrderBook::best_bid() const {
+  if (bid_side_.empty()) {
+    return std::nullopt;
+  }
   return bid_side_.begin()->first;
 }
 std::optional<std::int64_t> OrderBook::best_ask() const {
+  if (ask_side_.empty()) {
+    return std::nullopt;
+  }
   return ask_side_.begin()->first;
 }
 

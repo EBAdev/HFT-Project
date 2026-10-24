@@ -2,12 +2,13 @@
 #include "Order.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <list>
 #include <map>
 #include <memory>
 #include <optional>
 #include <unordered_map>
-#include <functional>
+#include <utility>
 
 namespace od {
 
@@ -24,6 +25,7 @@ public:
 
   // Add an order to the book.
   // Ownership transfers to the OrderBook on successful insertion.
+  // If insertion fails, the caller retains ownership of the order.
   bool add_order(std::unique_ptr<Order> order);
 
   // Cancel an order by its ID.
@@ -57,7 +59,8 @@ private:
   AskSide ask_side_;
 
   OrderQueue *find_queue(OrderSide side, std::int64_t price);
-  OrderQueue *find_or_create_queue(OrderSide side, std::int64_t price);
+  std::pair<OrderQueue *, bool> find_or_create_queue(OrderSide side,
+                                                      std::int64_t price);
 };
 
 } // namespace od
