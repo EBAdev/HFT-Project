@@ -12,11 +12,11 @@ Order::Order(std::uint64_t order_id, std::uint32_t instrument_id,
       state_(OrderState::New), filled_quantity_(0) {
 
   if (not valid_price()) {
-    throw std::invalid_argument("The input price is invalid");
+    throw std::invalid_argument("The input price is invalid.");
   }
 
   if (quantity_ <= 0) {
-    throw std::invalid_argument("The input quantity is invalid");
+    throw std::invalid_argument("The input quantity is invalid.");
   }
 }
 
