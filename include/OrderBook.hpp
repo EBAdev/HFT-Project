@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <functional>
 
 namespace od {
 
@@ -39,7 +40,9 @@ public:
   const Order *get_order(std::uint64_t order_id) const;
 
 private:
+  // A list of orders
   using OrderQueue = std::list<Order *>;
+  // for each price is an OrderQueue
   using BidSide =
       std::map<std::int64_t, OrderQueue, std::greater<std::int64_t>>;
   using AskSide = std::map<std::int64_t, OrderQueue>;
@@ -52,6 +55,9 @@ private:
   // Non-owning pointers preserve price-time priority.
   BidSide bid_side_;
   AskSide ask_side_;
+
+  OrderQueue *find_queue(OrderSide side, std::int64_t price);
+  OrderQueue *find_or_create_queue(OrderSide side, std::int64_t price);
 };
 
 } // namespace od
