@@ -64,7 +64,7 @@ public:
 
 private:
   // internal storage
-  std::uint64_t order_id;
+  std::uint64_t order_id_;
   std::uint32_t instrument_id_;
   std::int64_t tick_price_;
   std::uint32_t quantity_;
@@ -74,11 +74,11 @@ private:
   std::uint32_t filled_quantity_;
 
   // Check that price is strictly positive
-  bool check_price() const;
+  bool valid_price() const;
   // Check that:
   //  The fill quantity is greater than zero.
   //  The fill quantity does not exceed the remaining quantity.
   //  The order is in a state that permits fills.
-  bool check_fill(std::uint32_t fill_quantity) const;
+  bool valid_fill(std::uint32_t fill_quantity) const;
 };
 } // namespace od
