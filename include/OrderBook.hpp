@@ -1,46 +1,57 @@
-#pragma once // prevents multiple inclusions
+#pragma once
 #include "Order.hpp"
+
 #include <cstdint>
 #include <list>
 #include <map>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 
 namespace od {
 
 class OrderBook {
-  // stores and organizes resting orders for an instrument.
-  // Uses First-In-First-Out (FIFO) principle for each price.
+  // Stores and organizes resting orders for a single instrument.
+  // Orders at each price level follow FIFO priority.
 
 public:
   // Constructor
   explicit OrderBook(std::uint32_t instrument_id);
 
-  // Getters for private values
+  // Getters
   std::uint32_t instrument_id() const;
 
-  // add an order to the book, method should check
-  // The instrument ID matches the book.
-  // The order ID is not already present.
-  // The order is in an acceptable state.
-  // The order is inserted at the correct price level and in FIFO order.
+  // Add an order to the book.
+  // Ownership transfers to the OrderBook on successful insertion.
   bool add_order(std::unique_ptr<Order> order);
 
-  // Cancel an order on the book
+  // Cancel an order by its ID.
   bool cancel_order(std::uint64_t order_id);
 
-  // get best bid/ask price
-  std::optional<std::int64_t> best_bid();
-  std::optional<std::int64_t> best_ask();
+  // Get best bid/ask prices.
+  std::optional<std::int64_t> best_bid() const;
+  std::optional<std::int64_t> best_ask() const;
 
-  // get order by id
-  Order get_order(std::uint64_t order_id);
+  // Find an order by ID.
+  // Returns nullptr if the order is not found.
+  // The returned pointer does not transfer ownership.
+  Order *get_order(std::uint64_t order_id);
+  const Order *get_order(std::uint64_t order_id) const;
 
 private:
-  std::uint32_t instrument_id_ ;
-  std::unique_ptr<Order> order_index;
-  std::map<std::int64_t, std::list<std::unique_ptr<Order>>> bid_side;
-  std::map<std::int64_t, std::list<std::unique_ptr<Order>>> ask_side;
+  using OrderQueue = std::list<Order *>;
+  using BidSide =
+      std::map<std::int64_t, OrderQueue, std::greater<std::int64_t>>;
+  using AskSide = std::map<std::int64_t, OrderQueue>;
+
+  std::uint32_t instrument_id_;
+
+  // Sole owners of Order objects, indexed by order ID.
+  std::unordered_map<std::uint64_t, std::unique_ptr<Order>> order_index_;
+
+  // Non-owning pointers preserve price-time priority.
+  BidSide bid_side_;
+  AskSide ask_side_;
 };
 
 } // namespace od
