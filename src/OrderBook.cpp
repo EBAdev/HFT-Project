@@ -161,6 +161,43 @@ bool OrderBook::cancel_order(std::uint64_t order_id) {
   return true;
 }
 
+bool OrderBook::remove_filled_order(std::uint64_t order_id) {
+  Order *order = get_order(order_id);
+  if (order == nullptr) {
+    return false;
+  }
+
+  // Depending on whether the order is a buy/sell find the queue
+  OrderQueue *queue = find_queue(order->side(), order->tick_price());
+  if (queue == nullptr) {
+    return false;
+  }
+
+  // remove the order from the queue
+  auto it = std::find(queue->begin(), queue->end(), order);
+  if (it == queue->end()) {
+    return false;
+  }
+  // validate that order is terminal, only terminal orders can be removed
+  if (order->is_active()) {
+    return false;
+  }
+  queue->erase(it);
+  if (queue->empty()) {
+    // if order was the last at its price level, we remove the price level from
+    // the bid/ask
+    if (order->side() == OrderSide::Buy) {
+      bid_side_.erase(order->tick_price());
+    } else {
+      ask_side_.erase(order->tick_price());
+    }
+  }
+
+  // remove the order from the order_index, this destroys the order.
+  order_index_.erase(order_id);
+  return true;
+}
+
 std::optional<std::int64_t> OrderBook::best_bid() const {
   if (bid_side_.empty()) {
     return std::nullopt;
