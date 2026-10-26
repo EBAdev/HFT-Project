@@ -103,3 +103,7 @@ GoogleTest is used for unit testing if configured in the project.
 This is an educational project, not a production-ready trading system. The initial focus is correctness, clear ownership semantics, and a sound order-book design before optimizing for low latency.
 
 The longer-term objective is to understand the mechanics of a limit order book and matching engine, then use them as the foundation for a market-making simulator.
+
+## Other thoughts / Enhancements for future iterations
+
+Currently the orders are destroyed if they do not match the MatchingEngine's criteria. In a real-world scenario, rejected orders might be logged or returned to the client for further action. Future iterations could include more sophisticated order handling, such as partial fills, order expiration, and advanced order types. This also means that at no point will an order have the state of "Rejected" in the current implementation, as rejected orders are destroyed immediately. Future iterations could include a more sophisticated order lifecycle that allows for rejected orders to be logged or returned to the client for further action.
