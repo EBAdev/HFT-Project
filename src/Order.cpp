@@ -15,7 +15,7 @@ Order::Order(std::uint64_t order_id, std::uint32_t instrument_id,
     throw std::invalid_argument("The input price is invalid.");
   }
 
-  if (quantity_ <= 0) {
+  if (quantity_ == 0) {
     throw std::invalid_argument("The input quantity is invalid.");
   }
 }
