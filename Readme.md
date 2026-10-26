@@ -34,6 +34,11 @@ The project is organized around three core components:
 ### `Order`
 
 Represents an individual limit order. It stores order information such as its ID, instrument, side, price, quantity, and state.
+Upon creation an order is in the `New` state. It can transition to `Active`, `PartiallyFilled`, `Cancelled`, `Rejected`, or `Filled` states
+based on its lifecycle in the order book.
+
+An order validates its attributes upon construction and throws an exception if any attributes are invalid (e.g., negative price or quantity).
+The order class provides methods to update its state and track filled quantities.
 
 ### `OrderBook`
 
@@ -46,9 +51,23 @@ Maintains the resting buy and sell orders for a particular instrument.
 
 The order book owns its orders through `std::unique_ptr<Order>`. Price-level queues hold non-owning pointers to those orders.
 
-### `MatchingEngine` — Planned
+### `MatchingEngine` — In process
 
 Will handle incoming orders, match compatible buy and sell orders, apply price-time priority, update order states, and report executions. The order book will maintain the remaining resting liquidity.
+
+### `Execution` — In process
+
+Data structure to record trade executions, including the matched orders, execution price, quantity.
+
+## Ownership Model
+
+An Incoming order is first created by the client. It is then passed to the MatchingEngine, if the order is accepted, the MatchingEngine transfers ownership.
+The MatchingEngine then tries to match the order against the opposite side of the book.
+
+1. Any trade executions that occur are recorded as 'Execution' objects, which are owned by the MatchingEngine. Once the matching is complete one of the following occurs:
+   - If the order is partially filled, the MatchingEngine will hand ownership of the remaining order to the OrderBook.
+   - If the order is fully filled, the MatchingEngine will destroy the order.
+2. If the order is rejected, the MatchingEngine will destroy the order.
 
 ## Development Roadmap
 
