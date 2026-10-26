@@ -3,6 +3,7 @@
 #include "Order.hpp"
 #include "OrderBook.hpp"
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -14,58 +15,64 @@ class MatchingEngine {
   // The order book will maintain the remaining resting liquidity.
 
 public:
-  // Constructor
-  explicit MatchingEngine(OrderBook book);
+  // Constructor, a Matching Engine per traded instrument.
+  explicit MatchingEngine(std::uint32_t instrument_id);
 
-  // Adds a new limit order to the Market.
-  // Only accepts Orders with state new.
-  // On success the Order was activated and handed to the OrderBook.
-  // On failure the method throws an error
-  // and does not transition the order.
-  // Successful order submission triggers liquidty matching,
-  // this continues until the book has settled in a state where no match is
-  // possible.
-  bool add_order(Order order);
+  // Adds a new limit order to the Market, only accepts Orders with state New.
+  // On failure the method throws an error and the order is destroyed.
+  //
+  // If the order is accepted it is activated and, ownership is transferred to
+  // the MatchingEngine The MatchingEngine will then try to match the incoming
+  // order based on the current orderbook If the order is completely filled, the
+  // executions are recorded and the order is destroyed. If the order has
+  // remaning quantity and no match is possible, ownership is transferred to the
+  // order book.
+  void add_order(std::unique_ptr<Order>);
 
   // Cancels an active order in the Market.
   // On sucess the order was able to cancel and was removed from the OrderBook.
   // On failure the order cannot cancel.
   bool cancel_order(std::uint64_t order_id);
 
-  // Find an order by ID.
-  // Returns nullptr if the order is not found.
-  // The returned pointer does not transfer ownership.
-  Order *get_order(std::uint64_t order_id);
-  const Order *get_order(std::uint64_t order_id) const;
-
   // Market statistics
   std::optional<std::int64_t> best_bid() const;
   std::optional<std::int64_t> best_ask() const;
   std::optional<std::int64_t> bid_ask_spread() const;
-  std::int64_t total_executions() const;
-  std::int64_t traded_quantity() const;
-  Execution *latest_execution() const;
+
+  // Cumulative counters
+  const std::uint64_t *total_executions() const;
+  const std::uint64_t *traded_quantity() const;
+
+  // returns a nullptr if no executions has happened
+  const Execution *latest_execution() const;
 
   // OrderID1 and OrderID2
   using ExecutionHistory = std::vector<Execution>;
 
-  // Returns a history of Executions
-  ExecutionHistory match_history() const;
+  // Returns a pointer to the history of Executions
+  const ExecutionHistory *execution_history() const;
+  // Returns a pointer to the OrderBook
+  const OrderBook *order_book() const;
 
 private:
-  OrderBook *book_;
+  std::int32_t instrument_id_;
+
+  // A MatchingEngine owns its OrderBook
+  OrderBook book_;
   ExecutionHistory executions_;
+  std::uint64_t total_executions_;
+  std::uint64_t traded_quantity_;
 
   // Matches the incoming order with the current bid/ask.
   // An exchange of the instrument happens at the resting orders price.
   // The return is how many executions that happens due to the incoming order.
   // If the return i 0 no bids matched an ask.
-  std::uint64_t settle_incoming_liquidity(Order incoming_order);
+  std::uint64_t settle_incoming_order(Order *incoming_order);
 
   // Fills the ask order with the bid volume.
   // The order with the least quantity becomes filled
   // The order with the most quantity becomes partially filled
   // if the quantities are equal both orders become filled
-  bool fill_order(Order *bid_order, Order *ask_order);
+  void fill_order(Order *bid_order, Order *ask_order);
 };
 } // namespace od
