@@ -41,6 +41,7 @@ public:
   Order *get_order(std::uint64_t order_id);
   const Order *get_order(std::uint64_t order_id) const;
 
+
 private:
   // A list of orders
   using OrderQueue = std::list<Order *>;
@@ -60,7 +61,7 @@ private:
 
   OrderQueue *find_queue(OrderSide side, std::int64_t price);
   std::pair<OrderQueue *, bool> find_or_create_queue(OrderSide side,
-                                                      std::int64_t price);
+                                                     std::int64_t price);
 };
 
 } // namespace od
