@@ -31,6 +31,10 @@ public:
   // Cancel an order by its ID.
   bool cancel_order(std::uint64_t order_id);
 
+  // A resting order may be fully filled by incoming orders
+  // this method cleans the order_index if this happens.
+  bool remove_filled_order(std::uint64_t order_id);
+
   // Get best bid/ask prices.
   std::optional<std::int64_t> best_bid() const;
   std::optional<std::int64_t> best_ask() const;
