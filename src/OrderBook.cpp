@@ -211,4 +211,23 @@ std::optional<std::int64_t> OrderBook::best_ask() const {
   return ask_side_.begin()->first;
 }
 
+Order *OrderBook::best_order(OrderSide side) {
+  std::optional<std::int64_t> best_price;
+  if (side == OrderSide::Buy) {
+    best_price = best_bid();
+  } else {
+    best_price = best_ask();
+  }
+
+  if (best_price.has_value()) {
+    OrderQueue *queue = find_queue(side, best_price.value());
+    if (queue != nullptr) {
+      return queue->front(); // reference to first order in queue
+    }
+  }
+
+  // Either the best price was unavailable or we was unable to find the queue.
+  return nullptr;
+}
+
 } // namespace od

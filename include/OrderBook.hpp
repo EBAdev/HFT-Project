@@ -39,12 +39,17 @@ public:
   std::optional<std::int64_t> best_bid() const;
   std::optional<std::int64_t> best_ask() const;
 
+  // Find best order for a given side
+  // Returns nullptr if the order is not found.
+  // The returned pointer does not transfer ownership.
+  const Order *best_order(OrderSide side) const;
+  Order *best_order(OrderSide side);
+
   // Find an order by ID.
   // Returns nullptr if the order is not found.
   // The returned pointer does not transfer ownership.
   Order *get_order(std::uint64_t order_id);
   const Order *get_order(std::uint64_t order_id) const;
-
 
 private:
   // A list of orders
