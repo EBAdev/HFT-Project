@@ -24,6 +24,10 @@ std::optional<std::int64_t> MatchingEngine::best_ask() const {
   return book_.best_ask();
 }
 
+bool MatchingEngine::cancel_order(std::uint64_t order_id) {
+  return book_.cancel_order(order_id);
+}
+
 // expose private values
 const std::uint64_t *MatchingEngine::total_executions() const {
   return &total_executions_;
@@ -41,7 +45,9 @@ MatchingEngine::execution_history() const {
 
 void MatchingEngine::validate_incoming_order(Order *order) {
   if (order == nullptr) {
-    throw std::invalid_argument("Input pointer is a nullptr");
+    throw std::invalid_argument("Input pointer is a nullptr.");
+  } else if (order->instrument_id() != instrument_id_) {
+    throw std::invalid_argument("Incoming order is on the wrong instrument.");
   } else if (order->state() != OrderState::New) {
     throw std::invalid_argument("Order has wrong state, only OrderState::New "
                                 "can be added to Matching Engine.");
