@@ -27,7 +27,7 @@ public:
   // executions are recorded and the order is destroyed. If the order has
   // remaning quantity and no match is possible, ownership is transferred to the
   // order book.
-  void add_order(std::unique_ptr<Order>);
+  void add_order(std::unique_ptr<Order> order);
 
   // Cancels an active order in the Market.
   // On sucess the order was able to cancel and was removed from the OrderBook.
@@ -54,6 +54,11 @@ public:
   // Returns a pointer to the OrderBook
   const OrderBook *order_book() const;
 
+  const std::uint32_t instrument_id() const;
+  // Throws an error if the order is invalid and would not be accepted by the
+  // add_order method
+  void validate_incoming_order(Order *order);
+
 private:
   std::int32_t instrument_id_;
 
@@ -73,6 +78,7 @@ private:
   // The order with the least quantity becomes filled
   // The order with the most quantity becomes partially filled
   // if the quantities are equal both orders become filled
-  void fill_order(Order *bid_order, Order *ask_order);
+  // Return is how much was filled
+  std::uint64_t fill_order(Order *bid_order, Order *ask_order);
 };
 } // namespace od
