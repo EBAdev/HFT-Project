@@ -127,4 +127,14 @@ std::uint64_t MatchingEngine::settle_incoming_order(Order *incoming_order) {
   return num_executions;
 }
 
+std::uint32_t MatchingEngine::fill_order(Order *bid_order, Order *ask_order) {
+  auto fill = std::min(bid_order->remaining_quantity(),
+                       ask_order->remaining_quantity());
+  bool bid_res = bid_order->fill(fill);
+  bool ask_res = ask_order->fill(fill);
+  if (not bid_res or not ask_res)
+    throw std::logic_error("An error occurred during filling of orders");
+  return fill;
+}
+
 } // namespace od

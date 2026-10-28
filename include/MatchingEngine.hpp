@@ -79,6 +79,6 @@ private:
   // The order with the most quantity becomes partially filled
   // if the quantities are equal both orders become filled
   // Return is how much was filled
-  std::uint64_t fill_order(Order *bid_order, Order *ask_order);
+  std::uint32_t fill_order(Order *bid_order, Order *ask_order);
 };
 } // namespace od
