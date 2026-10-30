@@ -1,6 +1,5 @@
 #include "Order.hpp"
 
-#include <cstdint>
 #include <gtest/gtest.h>
 #include <stdexcept>
 

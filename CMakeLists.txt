@@ -24,6 +24,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 add_library(hft_core
     src/Order.cpp
     src/OrderBook.cpp
+    src/MatchingEngine.cpp
 )
 
 target_include_directories(hft_core
@@ -44,6 +45,7 @@ target_link_libraries(hft_project
 add_executable(test_order
     tests/test_order.cpp
     tests/test_order_book.cpp
+    tests/test_matching.cpp
 )
 
 # Link the shared library and Google Test to the test executable
