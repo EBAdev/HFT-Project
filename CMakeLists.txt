@@ -66,3 +66,6 @@ gtest_discover_tests(test_order)
 # cmake --build build
 # To run the tests, you can use the following command:
 # ctest --test-dir build --output-on-failure
+#
+# To run the main application, you can use the following command:
+# ./build/hft_project

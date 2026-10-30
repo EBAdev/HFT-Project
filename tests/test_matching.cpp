@@ -8,7 +8,6 @@
 #include <stdexcept>
 
 namespace od {
-namespace {
 
 constexpr std::uint32_t kInstrumentId = 42;
 
@@ -453,37 +452,8 @@ TEST_F(MatchingEngineTest, DifferentEnginesMaintainIndependentBooks) {
 }
 
 // -----------------------------------------------------------------------------
-// Integration scenario: multiple price levels, FIFO, partial residual
+// Execution records and history
 // -----------------------------------------------------------------------------
-
-TEST_F(MatchingEngineTest, MultiLevelFifoScenarioProducesExpectedResidualBook) {
-  // At 101, order 2 arrived before order 3.
-  engine.add_order(make_order(1, OrderSide::Sell, 102, 100));
-  engine.add_order(make_order(2, OrderSide::Sell, 101, 100));
-  engine.add_order(make_order(3, OrderSide::Sell, 101, 50));
-  engine.add_order(make_order(4, OrderSide::Sell, 103, 100));
-
-  engine.add_order(make_order(5, OrderSide::Buy, 103, 180));
-
-  // 100 from order 2, 50 from order 3, and 30 from order 1.
-  EXPECT_EQ(*engine.total_executions(), 3u);
-  EXPECT_EQ(*engine.traded_quantity(), 180u);
-
-  EXPECT_EQ(engine.order_book()->get_order(2), nullptr);
-  EXPECT_EQ(engine.order_book()->get_order(3), nullptr);
-
-  const Order *order_at_102 = engine.order_book()->get_order(1);
-  ASSERT_NE(order_at_102, nullptr);
-  EXPECT_EQ(order_at_102->remaining_quantity(), 70u);
-
-  const Order *order_at_103 = engine.order_book()->get_order(4);
-  ASSERT_NE(order_at_103, nullptr);
-  EXPECT_EQ(order_at_103->remaining_quantity(), 100u);
-
-  EXPECT_EQ(*engine.best_ask(), 102);
-  EXPECT_FALSE(engine.best_bid().has_value());
-  ASSERT_NE(engine.latest_execution(), nullptr);
-}
 
 TEST_F(MatchingEngineTest, ExecutionRecordContainsCorrectBuyAndSellOrderIds) {
   auto sell = make_order(1, OrderSide::Sell, 100, 10);
@@ -658,5 +628,37 @@ TEST_F(MatchingEngineTest,
 
   EXPECT_EQ(*engine.traded_quantity(), 7);
 }
-} // namespace
+
+// -----------------------------------------------------------------------------
+// Integration scenario: multiple price levels, FIFO, partial residual
+// -----------------------------------------------------------------------------
+
+TEST_F(MatchingEngineTest, MultiLevelFifoScenarioProducesExpectedResidualBook) {
+  // At 101, order 2 arrived before order 3.
+  engine.add_order(make_order(1, OrderSide::Sell, 102, 100));
+  engine.add_order(make_order(2, OrderSide::Sell, 101, 100));
+  engine.add_order(make_order(3, OrderSide::Sell, 101, 50));
+  engine.add_order(make_order(4, OrderSide::Sell, 103, 100));
+
+  engine.add_order(make_order(5, OrderSide::Buy, 103, 180));
+
+  // 100 from order 2, 50 from order 3, and 30 from order 1.
+  EXPECT_EQ(*engine.total_executions(), 3u);
+  EXPECT_EQ(*engine.traded_quantity(), 180u);
+
+  EXPECT_EQ(engine.order_book()->get_order(2), nullptr);
+  EXPECT_EQ(engine.order_book()->get_order(3), nullptr);
+
+  const Order *order_at_102 = engine.order_book()->get_order(1);
+  ASSERT_NE(order_at_102, nullptr);
+  EXPECT_EQ(order_at_102->remaining_quantity(), 70u);
+
+  const Order *order_at_103 = engine.order_book()->get_order(4);
+  ASSERT_NE(order_at_103, nullptr);
+  EXPECT_EQ(order_at_103->remaining_quantity(), 100u);
+
+  EXPECT_EQ(*engine.best_ask(), 102);
+  EXPECT_FALSE(engine.best_bid().has_value());
+  ASSERT_NE(engine.latest_execution(), nullptr);
+}
 } // namespace od
