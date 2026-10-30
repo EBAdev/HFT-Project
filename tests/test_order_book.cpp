@@ -180,4 +180,177 @@ TEST_F(OrderBookTest, RejectCancelledOrder) {
   EXPECT_NE(order, nullptr);
   EXPECT_FALSE(book.best_bid().has_value());
 }
+
+// -----------------------------------------------------------------------------
+// Basic removal
+// -----------------------------------------------------------------------------
+
+TEST_F(OrderBookTest, RemovesFilledOrder) {
+  auto order1 = make_order(1, OrderSide::Sell, 100);
+  ASSERT_TRUE(book.add_order(order1));
+
+  Order *order = book.get_order(1);
+  ASSERT_NE(order, nullptr);
+  ASSERT_TRUE(order->fill(10));
+
+  EXPECT_TRUE(book.remove_filled_order(1));
+
+  EXPECT_EQ(book.get_order(1), nullptr);
+  EXPECT_FALSE(book.best_ask().has_value());
+}
+
+// -----------------------------------------------------------------------------
+// Removal from a price level containing multiple orders
+// -----------------------------------------------------------------------------
+
+TEST_F(OrderBookTest, RemovingOrderPreservesOtherOrdersAtSamePrice) {
+  auto order1 = make_order(1, OrderSide::Sell, 100);
+  auto order2 = make_order(2, OrderSide::Sell, 100);
+  auto order3 = make_order(3, OrderSide::Sell, 100);
+  ASSERT_TRUE(book.add_order(order1));
+  ASSERT_TRUE(book.add_order(order2));
+  ASSERT_TRUE(book.add_order(order3));
+
+  Order *order = book.get_order(2);
+  ASSERT_NE(order, nullptr);
+  ASSERT_TRUE(order->fill(10));
+
+  EXPECT_TRUE(book.remove_filled_order(2));
+
+  EXPECT_EQ(book.get_order(2), nullptr);
+  EXPECT_NE(book.get_order(1), nullptr);
+  EXPECT_NE(book.get_order(3), nullptr);
+
+  ASSERT_TRUE(book.best_ask().has_value());
+  EXPECT_EQ(*book.best_ask(), 100);
+}
+
+TEST_F(OrderBookTest, RemovingLastOrderAtPriceLevelRemovesPriceLevel) {
+  auto order1 = make_order(1, OrderSide::Sell, 100);
+  auto order2 = make_order(2, OrderSide::Sell, 101);
+  ASSERT_TRUE(book.add_order(order1));
+  ASSERT_TRUE(book.add_order(order2));
+
+  Order *order = book.get_order(1);
+  ASSERT_NE(order, nullptr);
+  ASSERT_TRUE(order->fill(10));
+
+  EXPECT_TRUE(book.remove_filled_order(1));
+
+  EXPECT_EQ(book.get_order(1), nullptr);
+  EXPECT_NE(book.get_order(2), nullptr);
+
+  ASSERT_TRUE(book.best_ask().has_value());
+  EXPECT_EQ(*book.best_ask(), 101);
+}
+
+// -----------------------------------------------------------------------------
+// Best bid and ask updates
+// -----------------------------------------------------------------------------
+
+TEST_F(OrderBookTest, RemovingBestAskUpdatesBestAsk) {
+  auto order1 = make_order(1, OrderSide::Sell, 100);
+  auto order2 = make_order(2, OrderSide::Sell, 101);
+  auto order3 = make_order(3, OrderSide::Sell, 102);
+  ASSERT_TRUE(book.add_order(order1));
+  ASSERT_TRUE(book.add_order(order2));
+  ASSERT_TRUE(book.add_order(order3));
+
+  Order *order = book.get_order(1);
+  ASSERT_NE(order, nullptr);
+  ASSERT_TRUE(order->fill(10));
+
+  EXPECT_TRUE(book.remove_filled_order(1));
+
+  ASSERT_TRUE(book.best_ask().has_value());
+  EXPECT_EQ(*book.best_ask(), 101);
+
+  EXPECT_EQ(book.get_order(1), nullptr);
+  EXPECT_NE(book.get_order(2), nullptr);
+  EXPECT_NE(book.get_order(3), nullptr);
+}
+
+TEST_F(OrderBookTest, RemovingBestBidUpdatesBestBid) {
+  auto order1 = make_order(1, OrderSide::Buy, 102);
+  auto order2 = make_order(2, OrderSide::Buy, 101);
+  auto order3 = make_order(3, OrderSide::Buy, 100);
+  ASSERT_TRUE(book.add_order(order1));
+  ASSERT_TRUE(book.add_order(order2));
+  ASSERT_TRUE(book.add_order(order3));
+
+  Order *order = book.get_order(1);
+  ASSERT_NE(order, nullptr);
+  ASSERT_TRUE(order->fill(10));
+
+  EXPECT_TRUE(book.remove_filled_order(1));
+
+  ASSERT_TRUE(book.best_bid().has_value());
+  EXPECT_EQ(*book.best_bid(), 101);
+
+  EXPECT_EQ(book.get_order(1), nullptr);
+  EXPECT_NE(book.get_order(2), nullptr);
+  EXPECT_NE(book.get_order(3), nullptr);
+}
+
+// -----------------------------------------------------------------------------
+// Invalid removal attempts
+// -----------------------------------------------------------------------------
+
+TEST_F(OrderBookTest, CannotRemoveActiveOrder) {
+  auto order1 = make_order(1, OrderSide::Sell, 100);
+  ASSERT_TRUE(book.add_order(order1));
+
+  EXPECT_FALSE(book.remove_filled_order(1));
+
+  EXPECT_NE(book.get_order(1), nullptr);
+
+  ASSERT_TRUE(book.best_ask().has_value());
+  EXPECT_EQ(*book.best_ask(), 100);
+}
+
+TEST_F(OrderBookTest, RemovingUnknownOrderReturnsFalse) {
+  EXPECT_FALSE(book.remove_filled_order(999));
+
+  EXPECT_EQ(book.get_order(999), nullptr);
+  EXPECT_FALSE(book.best_bid().has_value());
+  EXPECT_FALSE(book.best_ask().has_value());
+}
+
+// -----------------------------------------------------------------------------
+// Removal across both sides of the book
+// -----------------------------------------------------------------------------
+
+TEST_F(OrderBookTest, RemovingOrdersDoesNotCorruptOtherPriceLevels) {
+  auto order1 = make_order(1, OrderSide::Buy, 100);
+  auto order2 = make_order(2, OrderSide::Buy, 99);
+  auto order3 = make_order(3, OrderSide::Sell, 101);
+  auto order4 = make_order(4, OrderSide::Sell, 102);
+  ASSERT_TRUE(book.add_order(order1));
+  ASSERT_TRUE(book.add_order(order2));
+  ASSERT_TRUE(book.add_order(order3));
+  ASSERT_TRUE(book.add_order(order4));
+
+  Order *buy_order = book.get_order(1);
+  ASSERT_NE(buy_order, nullptr);
+  ASSERT_TRUE(buy_order->fill(10));
+
+  Order *sell_order = book.get_order(3);
+  ASSERT_NE(sell_order, nullptr);
+  ASSERT_TRUE(sell_order->fill(10));
+
+  EXPECT_TRUE(book.remove_filled_order(1));
+  EXPECT_TRUE(book.remove_filled_order(3));
+
+  EXPECT_EQ(book.get_order(1), nullptr);
+  EXPECT_EQ(book.get_order(3), nullptr);
+
+  EXPECT_NE(book.get_order(2), nullptr);
+  EXPECT_NE(book.get_order(4), nullptr);
+
+  ASSERT_TRUE(book.best_bid().has_value());
+  EXPECT_EQ(*book.best_bid(), 99);
+
+  ASSERT_TRUE(book.best_ask().has_value());
+  EXPECT_EQ(*book.best_ask(), 102);
+}
 } // namespace od
