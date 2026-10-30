@@ -2,6 +2,7 @@
 #include "Execution.hpp"
 #include "Order.hpp"
 #include "OrderBook.hpp"
+
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -43,14 +44,13 @@ public:
   const std::uint64_t *total_executions() const;
   const std::uint64_t *traded_quantity() const;
 
-  // returns a nullptr if no executions has happened
-  const Execution *latest_execution() const;
-
   // OrderID1 and OrderID2
   using ExecutionHistory = std::vector<Execution>;
 
   // Returns a pointer to the history of Executions
   const ExecutionHistory *execution_history() const;
+  // returns a nullptr if no executions has happened
+  const Execution *latest_execution() const;
   // Returns a pointer to the OrderBook
   const OrderBook *order_book() const;
 

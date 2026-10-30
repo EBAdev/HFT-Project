@@ -13,7 +13,8 @@
 namespace od {
 
 MatchingEngine::MatchingEngine(std::uint32_t instrument_id)
-    : instrument_id_(instrument_id), book_(OrderBook(instrument_id)) {}
+    : instrument_id_(instrument_id), book_(OrderBook(instrument_id)),
+      total_executions_(0), traded_quantity_(0) {}
 
 // Expose the order book and its statistics
 const OrderBook *MatchingEngine::order_book() const { return &book_; }
@@ -22,6 +23,15 @@ std::optional<std::int64_t> MatchingEngine::best_bid() const {
 }
 std::optional<std::int64_t> MatchingEngine::best_ask() const {
   return book_.best_ask();
+}
+std::optional<std::int64_t> MatchingEngine::bid_ask_spread() const {
+  auto bb = best_bid();
+  auto ba = best_ask();
+
+  if (bb.has_value() && ba.has_value()) {
+    return ba.value() - bb.value();
+  }
+  return std::nullopt;
 }
 
 bool MatchingEngine::cancel_order(std::uint64_t order_id) {
@@ -41,6 +51,13 @@ const std::uint32_t MatchingEngine::instrument_id() const {
 const MatchingEngine::ExecutionHistory *
 MatchingEngine::execution_history() const {
   return &executions_;
+}
+
+const Execution *MatchingEngine::latest_execution() const {
+  if (executions_.empty()) {
+    return nullptr;
+  }
+  return &executions_.back();
 }
 
 void MatchingEngine::validate_incoming_order(Order *order) {
@@ -114,6 +131,8 @@ std::uint64_t MatchingEngine::settle_incoming_order(Order *incoming_order) {
     // actually fill the orders and transition states of orders to filled or
     // partially filled
     trade.execution_quantity = fill_order(buyer, seller);
+    total_executions_ += 1;
+    traded_quantity_ += trade.execution_quantity;
     executions_.emplace_back(trade);
 
     // If the counterpart was filled
